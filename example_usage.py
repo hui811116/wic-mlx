@@ -18,17 +18,7 @@ from functools import partial
 
 import argparse
 
-# def _negative_masks(block_size):
-#     n = 2 * block_size
-#     mask = mx.ones((n, n), dtype=mx.bool_)
-#     mask = mx.diag(mx.zeros(n, dtype=mx.bool_)) + mask
-#     # off-diagonal blocks are False, diagonal blocks are True
-#     for i in range(block_size):
-#         mask[i, block_size + i] = False
-#         mask[block_size + i, i] = False
-#     return mask
-
-def _cluster_mask(q1,q2,temperature=0.5):
+def _cluster_loss(q1,q2,temperature=0.5):
     nclusters = q1.shape[1]
     p1 = mx.sum(q1,axis=0)/mx.sum(q1) # avg probability of each cluster across samples
     p2 = mx.sum(q2,axis=0)/mx.sum(q2)
@@ -59,7 +49,7 @@ def loss_fn(model,Xs):
         loss += nn.losses.mse_loss(xrs[i], Xs[i])
         # Cluster consistency loss
         for j in range(i+1, len(Xs)):
-           loss += _cluster_mask(qs[i], qs[j])
+           loss += _cluster_loss(qs[i], qs[j])
     return loss
 
 
