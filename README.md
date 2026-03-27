@@ -4,10 +4,7 @@ MLX versions of core WIC (Wyner Common Information Clustering) modules with sign
 
 ## Overview
 
-This folder contains optimized implementations of three key modules converted from PyTorch to MLX:
-
-- **dataloader.py** - Multi-view dataset loading and batch processing
-- **metric.py** - Clustering evaluation metrics and inference engines
+MLX Implementation of the contrastive multiview clustering solver. 
 
 ## Key Improvements
 
@@ -100,9 +97,7 @@ results = evaluate_clustering(
 | Fashion | 3 | 10 | 10000 | Image (multiple CNNs) |
 | Caltech-2V to 5V | 2-5 | 7 | 1400 | Image (multiple features) |
 
-## Comparison: PyTorch vs MLX
-
-### Advantages of MLX Implementation
+## Advantages of MLX Implementation
 
 1. **Device Agnostic**: Automatically optimizes for available hardware (CPU/GPU/Metal)
 2. **Composable APIs**: Clear separation of concerns with modular design
@@ -111,7 +106,7 @@ results = evaluate_clustering(
 5. **Memory Efficient**: Lazy array conversion and no-grad contexts
 6. **Cleaner Inference**: Dedicated engine classes vs scattered functions
 
-### Key Architectural Changes
+## Key Architectural Changes
 
 - Replaced inheritance from `torch.utils.data.Dataset` with custom base class
 - Removed DataLoader dependency; implemented efficient replacement
