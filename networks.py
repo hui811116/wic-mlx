@@ -39,9 +39,13 @@ class NetworkWIC(nn.Module):
         self.class_num = class_num
         self.encoders = [Encoder(input_size[i], feature_dim) for i in range(view)]
         #self.encoders = nn.ModuleList([Encoder(input_size[i], feature_dim) for i in range(view)])
-        self.decoders = [Decoder(feature_dim, input_size[i]) for i in range(view)]
+        self.decoders = [Decoder(input_size[i], feature_dim) for i in range(view)]
         #self.decoders = nn.ModuleList([Decoder(feature_dim, input_size[i]) for i in range(view)])
-        self.cluster_layer = nn.Linear(feature_dim, class_num)
+        #self.cluster_layer = nn.Linear(feature_dim, class_num)
+        self.cluster_layer = nn.Sequential(
+            nn.Linear(feature_dim, class_num),
+            nn.Softmax(),)
+
     def __call__(self, xvs):
         # For conditional independent  views
         views = len(xvs)

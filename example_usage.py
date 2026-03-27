@@ -15,8 +15,54 @@ from metric import BiMaskInferenceEngine, WeightedInferenceEngine, evaluate_clus
 from wynerloss import WynerLoss
 from networks import NetworkWIC
 
+from functools import partial
 
 import argparse
+
+# def _negative_masks(block_size):
+#     n = 2 * block_size
+#     mask = mx.ones((n, n), dtype=mx.bool_)
+#     mask = mx.diag(mx.zeros(n, dtype=mx.bool_)) + mask
+#     # off-diagonal blocks are False, diagonal blocks are True
+#     for i in range(block_size):
+#         mask[i, block_size + i] = False
+#         mask[block_size + i, i] = False
+#     return mask
+
+def _cluster_mask(q1,q2,temperature=0.5):
+    nclusters = q1.shape[1]
+    p1 = mx.sum(q1,axis=0)/mx.sum(q1) # avg probability of each cluster across samples
+    p2 = mx.sum(q2,axis=0)/mx.sum(q2)
+
+    ent1 = -mx.sum(p1*mx.log(p1+1e-10))
+    ent2 = -mx.sum(p2*mx.log(p2+1e-10))
+    
+    q1_t = mx.transpose(q1) # shape (class_num, batch_size)
+    q2_t = mx.transpose(q2)
+
+    qc = mx.concat([q1_t,q2_t],axis=0) # shape (2*class_num, batch_size)
+    sim = mx.matmul(qc, mx.transpose(qc)) # shape (2*class_num, 2*class_num)
+    # divide by temperature if needed
+    sim = sim/temperature
+    # focus on contrasting different clusters across views, so the labels are the same indices in the two halves of sim
+    labels = mx.concat([mx.arange(nclusters)+nclusters, mx.arange(nclusters)], axis=0) # shape (2*class_num,)
+    
+    loss = nn.losses.cross_entropy(sim, labels, reduction='mean')
+
+    return loss + ent1 + ent2
+
+def loss_fn(model,Xs):
+    # Xs is a list of views
+    hs, qs, xrs, zs = model(Xs)
+    loss = 0
+    for i in range(len(Xs)):
+        # Reconstruction loss
+        loss += nn.losses.mse_loss(xrs[i], Xs[i])
+        # Cluster consistency loss
+        for j in range(i+1, len(Xs)):
+           loss += _cluster_mask(qs[i], qs[j])
+    return loss
+
 
 def example_training(args):
     """
@@ -69,12 +115,12 @@ def example_training(args):
     # ============================================================================
     print("\nInitializing WynerLoss...")
     
-    loss_fn = WynerLoss(
-        batch_size=args.batch_size,
-        num_classes=config.class_num,
-        temperature_features=0.5,
-        temperature_clusters=0.5
-    )
+    #loss_fn = WynerLoss(
+    #    batch_size=args.batch_size,
+    #    num_classes=config.class_num,
+    #    temperature_features=0.5,
+    #    temperature_clusters=0.5
+    #)
     
     print("WynerLoss ready")
     
@@ -97,7 +143,24 @@ def example_training(args):
     
     mx.eval(model.parameters())  # Set to evaluation mode for demonstration
     
+    state = [model.state, optimizer.state]
+    loss_and_grad_func = nn.value_and_grad(model,loss_fn)
+    @partial(mx.compile,inputs=state,outputs=state)
+    def train_step(Xs):
+        loss, grads = loss_and_grad_func(model,Xs)
+        optimizer.update(model,grads)
+        return loss
+
     
+    for e in range(args.epochs):
+        loss_sum = 0
+        #mx.train(model.state)
+        for batch_views, batch_labels, batch_indices in train_loader:
+            loss = train_step(batch_views)
+            loss_sum += loss.item()
+            mx.eval(model.state)
+        print(f"Epoch {e+1}/{args.epochs}, Loss: {loss_sum:.4f}")
+        
     print("-" * 60)
     
     # ============================================================================
@@ -228,6 +291,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size",type=int,default=32,help="mini batch size for training")
     parser.add_argument("--cpu",action="store_true",default=False,help="Force using CPU to run the code")
     parser.add_argument("--lr",type=float,default=1e-4,help="learning rate for training")
+    parser.add_argument("--epochs",type=int,default=10,help="number of epochs for training")
     args = parser.parse_args()
     if args.cpu:
         mx.set_default_device(mx.cpu)

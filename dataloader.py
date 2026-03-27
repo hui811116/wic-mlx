@@ -225,15 +225,15 @@ class MultiViewDataLoader:
         self.dataset = dataset
         self.batch_size = batch_size
         self.num_samples = len(dataset)
-        self.indices = np.arange(self.num_samples)
-        
-        if shuffle:
-            np.random.shuffle(self.indices)
+        self.shuffle = shuffle
 
     def __iter__(self):
         """Iterate over batches."""
+        indices = np.arange(self.num_samples)
+        if self.shuffle:
+            np.random.shuffle(indices)
         for i in range(0, self.num_samples, self.batch_size):
-            batch_indices = self.indices[i:i + self.batch_size]
+            batch_indices = indices[i:i + self.batch_size]
             
             # Collect views
             batch_views = [[] for _ in range(self.dataset.num_views)]
