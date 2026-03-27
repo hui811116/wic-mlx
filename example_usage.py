@@ -7,24 +7,24 @@ Demonstrates loading data, setting up inference, and evaluating a multi-view mod
 from typing import Optional
 import mlx.core as mx
 import mlx.nn as nn
+import mlx.optimizers as optim
+from mlx.utils import tree_flatten
 
-from dataloader import load_dataset, MultiViewDataLoader
+from dataloader import load_dataset, MultiViewDataLoader, DATASET_REGISTRY
 from metric import BiMaskInferenceEngine, WeightedInferenceEngine, evaluate_clustering
 from wynerloss import WynerLoss
+from networks import NetworkWIC
 
 
-def example_training(
-    dataset_name: str = 'BDGP',
-    data_path: str = './data/',
-    batch_size: int = 32,
-    device_mode: str = 'cpu'
-):
+import argparse
+
+def example_training(args):
     """
     Example training workflow for multi-view clustering.
     
     Args:
-        dataset_name: Name of dataset to load
-        data_path: Path to dataset directory
+        dataset: Name of dataset to load
+        datapath: Path to dataset directory
         batch_size: Batch size for training
         device_mode: Computation device ('cpu' or 'gpu')
     """
@@ -32,12 +32,12 @@ def example_training(
     # ============================================================================
     # 1. LOAD DATASETS
     # ============================================================================
-    print(f"Loading {dataset_name} dataset...")
+    print(f"Loading {args.dataset} dataset...")
     
-    train_dataset, config = load_dataset(dataset_name, data_path, train=True)
-    test_dataset, _ = load_dataset(dataset_name, data_path, train=False)
+    train_dataset, config = load_dataset(args.dataset, args.datapath, train=True)
+    test_dataset, _ = load_dataset(args.dataset, args.datapath, train=False)
     
-    print(f"✓ Dataset Configuration:")
+    print(f"Dataset Configuration:")
     print(f"  - Views: {config.view}")
     print(f"  - Classes: {config.class_num}")
     print(f"  - Feature Dimensions: {config.dims}")
@@ -51,18 +51,18 @@ def example_training(
     
     train_loader = MultiViewDataLoader(
         train_dataset,
-        batch_size=batch_size,
+        batch_size=args.batch_size,
         shuffle=True
     )
     
     test_loader = MultiViewDataLoader(
         test_dataset,
-        batch_size=batch_size,
+        batch_size=args.batch_size,
         shuffle=False
     )
     
-    print(f"✓ Train batches: {len(train_loader)}")
-    print(f"✓ Test batches: {len(test_loader)}")
+    print(f"Train batches: {len(train_loader)}")
+    print(f"Test batches: {len(test_loader)}")
     
     # ============================================================================
     # 3. INITIALIZE LOSS FUNCTION
@@ -70,13 +70,13 @@ def example_training(
     print("\nInitializing WynerLoss...")
     
     loss_fn = WynerLoss(
-        batch_size=batch_size,
+        batch_size=args.batch_size,
         num_classes=config.class_num,
         temperature_features=0.5,
         temperature_clusters=0.5
     )
     
-    print("✓ WynerLoss ready")
+    print("WynerLoss ready")
     
     # ============================================================================
     # 4. TRAINING LOOP PSEUDOCODE
@@ -86,41 +86,17 @@ def example_training(
     
     # Note: This requires a model implementation
     # Example structure:
-    """
-    model = YourMultiViewModel(
-        input_dims=config.dims,
-        latent_dim=256,
-        num_classes=config.class_num,
-        num_views=config.view
+    model = NetworkWIC(
+        view=config.view,
+        input_size=config.dims,
+        feature_dim=256,
+        high_feature_dim=512,
+        class_num=config.class_num
     )
+    optimizer = optim.Adam(learning_rate=args.lr)
     
-    optimizer = mx.optimizers.Adam(learning_rate=1e-3)
+    mx.eval(model.parameters())  # Set to evaluation mode for demonstration
     
-    for epoch in range(num_epochs):
-        for batch_idx, (batch_views, batch_labels, _) in enumerate(train_loader):
-            
-            # Forward pass
-            h_views, q_views, _, z_views = model(batch_views)
-            
-            # Compute loss (pairing views)
-            h_view1, h_view2 = h_views[0], h_views[1]
-            q_view1, q_view2 = q_views[0], q_views[1]
-            
-            loss, loss_dict = loss_fn(
-                h_view1, h_view2,
-                q_view1, q_view2,
-                weight_feature=1.0,
-                weight_cluster=1.0
-            )
-            
-            # Backward pass
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            
-            if batch_idx % 10 == 0:
-                print(f"Epoch {epoch+1} | Batch {batch_idx} | Loss: {loss.item():.4f}")
-    """
     
     print("-" * 60)
     
@@ -202,7 +178,6 @@ def example_configuration():
     print("Dataset Registry")
     print("=" * 60)
     
-    from dataloader import DATASET_REGISTRY
     
     for name, config in DATASET_REGISTRY.items():
         print(f"\n{name}:")
@@ -247,6 +222,15 @@ def example_metrics():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--datapath",type=str,default="./data",help="/path/to/dataset")
+    parser.add_argument("--dataset",type=str,default="BDGP",choices=DATASET_REGISTRY.keys(),help="choose one of the dataset")
+    parser.add_argument("--batch_size",type=int,default=32,help="mini batch size for training")
+    parser.add_argument("--cpu",action="store_true",default=False,help="Force using CPU to run the code")
+    parser.add_argument("--lr",type=float,default=1e-4,help="learning rate for training")
+    args = parser.parse_args()
+    if args.cpu:
+        mx.set_default_device(mx.cpu)
     print("=" * 70)
     print("WIC-MLX: Multi-View Clustering with MLX")
     print("=" * 70)
@@ -259,8 +243,8 @@ if __name__ == "__main__":
     print("\n\n" + "=" * 70)
     print("MAIN EXAMPLE: Training Workflow")
     print("=" * 70)
-    example_training(dataset_name='BDGP')
+    example_training(args)
     
     print("\n" + "=" * 70)
-    print("✓ All examples completed!")
+    print("All examples completed!")
     print("=" * 70)

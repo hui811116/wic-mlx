@@ -5,6 +5,7 @@ from scipy.special import expit, logit, logsumexp
 import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
+from mlx.utils import tree_flatten
 import random
 import copy
 import itertools
