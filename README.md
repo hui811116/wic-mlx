@@ -8,7 +8,6 @@ This folder contains optimized implementations of three key modules converted fr
 
 - **dataloader.py** - Multi-view dataset loading and batch processing
 - **metric.py** - Clustering evaluation metrics and inference engines
-- **wynerloss.py** - Bipartite contrastive learning loss
 
 ## Key Improvements
 
@@ -52,25 +51,6 @@ This folder contains optimized implementations of three key modules converted fr
 - Comprehensive reporting with optional verbose output
 - Support for different prediction aggregation strategies
 
-### 3. **wynerloss.py**
-
-**Organization:**
-- Enhanced class docstrings with detailed parameter documentation
-- `MultiViewWynerLoss` for arbitrary number of views
-- Separated concerns: feature loss, cluster loss, entropy regularization
-
-**Improvements:**
-- Bipartite mask computation now clearer and more robust
-- Cross-entropy computation extracted as static method
-- Entropy calculation with normalization by max entropy
-- Loss dictionary returns for debugging and analysis
-- Type hints for all parameters and returns
-
-**Efficiency:**
-- Lazy mask creation on initialization
-- Vectorized operations using MLX primitives
-- Numerical stability (1e-8 epsilon for division)
-
 ## API Usage
 
 ### Loading Data
@@ -107,25 +87,6 @@ results = evaluate_clustering(
     per_view_features=features,
     num_classes=config.class_num,
     verbose=True
-)
-```
-
-### Loss Computation
-
-```python
-from wic_mlx.wynerloss import WynerLoss
-
-loss_fn = WynerLoss(
-    batch_size=32,
-    num_classes=5,
-    temperature_features=0.5,
-    temperature_clusters=0.5
-)
-
-# Forward pass
-total_loss, loss_dict = loss_fn(
-    h_view1, h_view2, q_view1, q_view2,
-    weight_feature=1.0, weight_cluster=1.0
 )
 ```
 

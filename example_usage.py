@@ -12,7 +12,6 @@ from mlx.utils import tree_flatten
 
 from dataloader import load_dataset, MultiViewDataLoader, DATASET_REGISTRY
 from metric import BiMaskInferenceEngine, WeightedInferenceEngine, evaluate_clustering
-from wynerloss import WynerLoss
 from networks import NetworkWIC
 
 from functools import partial
@@ -109,20 +108,6 @@ def example_training(args):
     
     print(f"Train batches: {len(train_loader)}")
     print(f"Test batches: {len(test_loader)}")
-    
-    # ============================================================================
-    # 3. INITIALIZE LOSS FUNCTION
-    # ============================================================================
-    print("\nInitializing WynerLoss...")
-    
-    #loss_fn = WynerLoss(
-    #    batch_size=args.batch_size,
-    #    num_classes=config.class_num,
-    #    temperature_features=0.5,
-    #    temperature_clusters=0.5
-    #)
-    
-    print("WynerLoss ready")
     
     # ============================================================================
     # 4. TRAINING LOOP PSEUDOCODE
