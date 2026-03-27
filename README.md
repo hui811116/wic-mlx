@@ -1,6 +1,6 @@
 # WIC-MLX: MLX Implementation of Multi-View Clustering
 
-MLX versions of core WIC (Weighted Information Clustering) modules with significant improvements in code organization, efficiency, and maintainability.
+MLX versions of core WIC (Wyner Common Information Clustering) modules with significant improvements in code organization, efficiency, and maintainability.
 
 ## Overview
 
